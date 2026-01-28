@@ -26,7 +26,7 @@ impl App {
         self.tree = read::build_tree(&self.procs);
 
         let mut last_tick = Instant::now();
-        let tick_rate = Duration::from_secs(1);
+        let tick_rate = Duration::from_millis(200);
 
         let mut prefix = String::new();
         self.lines = Vec::new();
