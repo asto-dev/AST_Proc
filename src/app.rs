@@ -25,7 +25,7 @@ impl App {
         self.tree = read::build_tree(&self.procs);
 
         let mut last_tick = Instant::now();
-        let tick_rate = Duration::from_millis(200);
+        let tick_rate = Duration::from_millis(1000);
 
         let mut prefix = String::new();
         self.lines = Vec::new();
@@ -60,6 +60,8 @@ impl App {
                 if let Event::Key(key) = event::read()? {
                     match key.code {
                         KeyCode::Char('q') => break Ok(()),
+                        KeyCode::Esc => break Ok(()),
+                        KeyCode::Char('Q') => break Ok(()),
                         KeyCode::Char('j') | KeyCode::Down => {
                             self.vertical_scroll =
                                 self.vertical_scroll.saturating_add(2).min(max_scroll);

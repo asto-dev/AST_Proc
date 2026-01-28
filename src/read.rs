@@ -1,8 +1,9 @@
 use crate::process::Process;
 use std::collections::HashMap;
 use std::fs::{self, DirEntry};
-pub fn read_proc(file: DirEntry) -> Option<Process> {
-    let pid = file.file_name().to_string_lossy().parse::<u32>().ok()?;
+
+pub fn read_proc(entry: DirEntry) -> Option<Process> {
+    let pid = entry.file_name().to_string_lossy().parse::<u32>().ok()?;
     Some(Process {
         pid,
         name: read_name(pid),
@@ -14,24 +15,20 @@ pub fn read_proc(file: DirEntry) -> Option<Process> {
 pub fn get_proc(path: &str) -> std::io::Result<HashMap<u32, Process>> {
     let procs: HashMap<u32, Process> = fs::read_dir(path)?
         .flatten()
-        .filter_map(|file| read_proc(file))
+        .filter_map(|entry| read_proc(entry))
         .map(|p| (p.pid, p))
         .collect();
     Ok(procs)
 }
 
 pub fn read_name(pid: u32) -> String {
-    fs::read(format!("/proc/{}/comm", pid))
-        .ok()
-        .map(|r| String::from_utf8_lossy(&r).trim().to_string())
-        .unwrap_or("<unknown>".into())
+    fs::read(format!("/proc/{pid}/comm"))
+        .map(|r| String::from_utf8_lossy(&r).trim().to_string()).unwrap_or_else(|_| "<kernel>".into())
 }
 
 pub fn read_exe(pid: u32) -> String {
     fs::read_link(format!("/proc/{}/exe", pid))
-        .ok()
-        .map(|p| p.display().to_string())
-        .unwrap_or_else(|| "<no access>".into())
+        .map(|p| p.display().to_string()).unwrap_or_else(|_| "<no access>".into())
 }
 
 pub fn read_status(pid: u32) -> u32 {
