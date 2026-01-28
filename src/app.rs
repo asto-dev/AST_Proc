@@ -2,7 +2,6 @@ use std::time::Instant;
 use std::time::Duration;
 use std::collections::HashMap;
 use crate::read;
-use crossterm::event::read;
 use crossterm::{
     event::{self, Event, KeyCode}};
 use ratatui::{DefaultTerminal, style::{Color, Style}, text::{Line, Text}, widgets::{Block, Borders, Paragraph, ScrollbarState}};
