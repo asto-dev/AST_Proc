@@ -42,7 +42,9 @@ ASTProc reads the Linux `/proc` filesystem and displays running processes in a h
 - Cargo
 
 Install Rust: 
-```curl https://sh.rustup.rs -sSf | sh```
+```bash 
+curl https://sh.rustup.rs -sSf | sh
+```
 
 
 ---
