@@ -2,6 +2,7 @@ use std::time::Instant;
 use std::time::Duration;
 use std::collections::HashMap;
 use crate::read;
+use crossterm::event::read;
 use crossterm::{
     event::{self, Event, KeyCode}};
 use ratatui::{DefaultTerminal, style::{Color, Style}, text::{Line, Text}, widgets::{Block, Borders, Paragraph, ScrollbarState}};
@@ -19,7 +20,6 @@ pub struct App {
     lines: Vec<Line<'static>>
 }
 
-
 impl App {
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
         self.procs = read::get_proc("/proc").unwrap();
@@ -34,6 +34,8 @@ impl App {
         build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
         loop {
             if last_tick.elapsed() >= tick_rate {
+                let new_procs = read::get_proc("/proc");
+                
                 self.procs = read::get_proc("/proc")?;
                 self.tree = read::build_tree(&self.procs);
                 
@@ -119,6 +121,25 @@ fn build_tree_lines(
             let content = format!("{}{}{} ({}) - [{}]", prefix, branch, p.name, p.pid, p.exe);
             lines.push(Line::from(content));
             build_tree_lines(*child, &mut new_prefix, tree, procs, lines);
+        }
+    }
+}
+
+fn diff_procs(old: &HashMap<u32, Process>, new: &HashMap<u32, Process>) {
+    let mut added = Vec::new();
+    let mut removed = Vec::new();
+    let mut changed = Vec::new();
+
+    for (&pid, proc_) in new {
+        match old.get(&pid) {
+            None => added.push(pid),
+            Some(old_proc) if old_proc != proc_ => changed.push(pid),
+            _ => {}
+        }
+    }
+    for &pid in old.keys() {
+        if !new.contains_key(&pid) {
+            removed.push(pid);
         }
     }
 }
