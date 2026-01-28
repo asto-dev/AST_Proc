@@ -34,13 +34,14 @@ impl App {
         build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
         loop {
             if last_tick.elapsed() >= tick_rate {
-                let new_procs = read::get_proc("/proc");
-                
-                self.procs = read::get_proc("/proc")?;
-                self.tree = read::build_tree(&self.procs);
-                
-                self.lines = Vec::new();
-                build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
+                let new_procs = read::get_proc("/proc")?;
+                let (added, removed, changed) = diff_procs(&self.procs, &new_procs);
+                if !added.is_empty() || !removed.is_empty() || !changed.is_empty() {
+                    self.procs = new_procs;
+                    self.tree = read::build_tree(&self.procs);
+                    self.lines.clear();
+                    build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
+                };
 
                 last_tick = Instant::now();
             }
@@ -125,7 +126,7 @@ fn build_tree_lines(
     }
 }
 
-fn diff_procs(old: &HashMap<u32, Process>, new: &HashMap<u32, Process>) {
+fn diff_procs(old: &HashMap<u32, Process>, new: &HashMap<u32, Process>) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let mut added = Vec::new();
     let mut removed = Vec::new();
     let mut changed = Vec::new();
@@ -142,4 +143,6 @@ fn diff_procs(old: &HashMap<u32, Process>, new: &HashMap<u32, Process>) {
             removed.push(pid);
         }
     }
+
+    (added, removed, changed)
 }
