@@ -1,16 +1,12 @@
-use crossterm::event::{self, Event, KeyCode};
-use ratatui::{
-    DefaultTerminal,
-    style::{Color, Style},
-    text::{Line, Text},
-    widgets::{Block, Borders, Paragraph, ScrollbarState},
-};
-use std::collections::HashMap;
-use std::time::Duration;
 use std::time::Instant;
+use std::time::Duration;
+use std::collections::HashMap;
+use crate::read;
+use crossterm::{
+    event::{self, Event, KeyCode}};
+use ratatui::{DefaultTerminal, style::{Color, Style}, text::{Line, Text}, widgets::{Block, Borders, Paragraph, ScrollbarState}};
 
 use crate::process::Process;
-use crate::read;
 
 #[derive(Default)]
 pub struct App {
@@ -18,34 +14,39 @@ pub struct App {
     pub horizontal_scroll_state: ScrollbarState,
     pub vertical_scroll: usize,
     pub horizontal_scroll: usize,
+    pub procs: HashMap<u32, Process>,
+    pub tree: HashMap<u32, Vec<u32>>,
+    lines: Vec<Line<'static>>
 }
+
 
 impl App {
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
-        let mut procs = read::get_proc("/proc").unwrap();
-        let mut tree = read::build_tree(&procs);
+        self.procs = read::get_proc("/proc").unwrap();
+        self.tree = read::build_tree(&self.procs);
 
         let mut last_tick = Instant::now();
         let tick_rate = Duration::from_secs(1);
 
         let mut prefix = String::new();
-        let mut lines: Vec<Line<'static>> = Vec::new();
+        self.lines = Vec::new();
 
-        build_tree_lines(0, &mut prefix, &tree, &procs, &mut lines);
+        build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
         loop {
             if last_tick.elapsed() >= tick_rate {
-                procs = read::get_proc("/proc")?;
-                tree = read::build_tree(&procs);
-                lines = Vec::new();
-                build_tree_lines(0, &mut prefix, &tree, &procs, &mut lines);
+                self.procs = read::get_proc("/proc")?;
+                self.tree = read::build_tree(&self.procs);
+                
+                self.lines = Vec::new();
+                build_tree_lines(0, &mut prefix, &self.tree, &self.procs, &mut self.lines);
 
                 last_tick = Instant::now();
             }
-
-            let max_scroll = lines.len().saturating_sub(1);
+            
+            let max_scroll = self.lines.len().saturating_sub(1);
 
             terminal.draw(|frame| {
-                let paragraph = Paragraph::new(Text::from(std::mem::take(&mut lines)))
+                let paragraph = Paragraph::new(Text::from(self.lines.clone()))
                     .block(Block::default().title("ASTProc").borders(Borders::ALL))
                     .style(Style::default().fg(Color::LightMagenta))
                     .scroll((self.vertical_scroll as u16, self.horizontal_scroll as u16));
@@ -97,7 +98,7 @@ fn build_tree_lines(
     tree: &HashMap<u32, Vec<u32>>,
     procs: &HashMap<u32, Process>,
     // lines: &mut Vec<String>,
-    lines: &mut Vec<Line<'static>>,
+    lines: &mut Vec<Line<'static>>
 ) {
     if let Some(children) = tree.get(&pid) {
         let mut sorted = children.clone();
@@ -113,7 +114,7 @@ fn build_tree_lines(
                 format!("{}{}", prefix, if is_last { "   " } else { "│  " })
             };
             let branch = if is_last { "└─ " } else { "├─ " };
-
+            
             let p = &procs[&child];
             let content = format!("{}{}{} ({}) - [{}]", prefix, branch, p.name, p.pid, p.exe);
             lines.push(Line::from(content));
